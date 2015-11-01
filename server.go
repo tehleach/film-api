@@ -9,10 +9,18 @@ import (
 	"github.com/tehleach/film-api/db"
 )
 
+var conn *db.Conn
+
 func main() {
-	insertTestDbData()
+	var err error
+	conn, err = db.NewConn("localhost")
+	if err != nil {
+		panic(err)
+	}
+
 	router := httprouter.New()
 	router.GET("/", Index)
+	router.GET("/films", Films)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
@@ -22,20 +30,12 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, "Welcome!\n")
 }
 
-//Film represents a film
-type Film struct {
-	Name     string
-	Director string
-}
-
-func insertTestDbData() {
-	dbConn, err := db.NewConn("localhost")
+//Films is the film list
+func Films(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var results []Film
+	err := conn.Session.DB("film-api").C("films").Find(nil).All(&results)
 	if err != nil {
 		panic(err)
 	}
-	c := dbConn.Session.DB("film-api").C("films")
-	err = c.Insert(&Film{"Django Unchained", "Quentin Tarantino"})
-	if err != nil {
-		panic(err)
-	}
+	fmt.Fprint(w, results)
 }
